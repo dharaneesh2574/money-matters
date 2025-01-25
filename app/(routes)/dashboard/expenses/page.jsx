@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash } from "lucide-react";
 
-function ExpenseComponent({ refreshData }) {
+function ExpenseComponent() {
   const [expensesList, setExpensesList] = useState([]);
 
   const getExpensesList = async () => {
@@ -28,8 +28,7 @@ function ExpenseComponent({ refreshData }) {
         .returning();
       if (result) {
         toast.success("Expense deleted successfully");
-        getExpensesList(); // Refresh the expenses list
-        refreshData && refreshData(); // Refresh parent data if function is passed
+        getExpensesList();
       }
     } catch (error) {
       toast.error("Failed to delete expense");
