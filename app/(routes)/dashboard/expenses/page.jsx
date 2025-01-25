@@ -1,22 +1,36 @@
 "use client";
 import db from "@/utils/dbConfig";
-import { expenses } from "@/utils/schema";
-import { desc, eq } from "drizzle-orm";
-import React, { useEffect, useState } from "react";
+import { expenses, budgets } from "@/utils/schema";
+import { desc, eq, and } from "drizzle-orm";
+import React, { use, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 function ExpenseComponent() {
   const [expensesList, setExpensesList] = useState([]);
+  const [userId, setUserId] = useState(null);
 
+    const user = useUser();
+    useEffect(() => {
+        user && setUserId(user.primaryEmailAddress?.emailAddress);
+    },[user]);
   const getExpensesList = async () => {
-    const result = await db
-      .select()
-      .from(expenses)
-      .orderBy(desc(expenses.id));
-    if (result) {
+    try {
+      // Query to fetch expenses linked to budgets associated with the current user
+      const result = await db
+        .select()
+        .from(expenses)
+        .innerJoin(budgets, eq(expenses.budgetId, budgets.id))
+        .where(eq(budgets.createdBy, userId))
+        .orderBy(desc(expenses.id));
+
+      if (result) {
         console.log(result);
-      setExpensesList(result);
+        setExpensesList(result);
+      }
+    } catch (error) {
+      console.error("Failed to fetch expenses", error);
     }
   };
 
@@ -54,7 +68,7 @@ function ExpenseComponent() {
             </tr>
           </thead>
           <tbody>
-            {expensesList.map((expense, index) => (
+            {expensesList.map(({ expenses: expense }, index) => (
               <tr
                 key={index}
                 className={`border-b ${
@@ -63,7 +77,9 @@ function ExpenseComponent() {
               >
                 <td className="p-3">{expense.name}</td>
                 <td className="p-3">${expense.amount}</td>
-                <td className="p-3">{new Date(expense.createdAt).toLocaleDateString()}</td>
+                <td className="p-3">
+                  {new Date(expense.createdAt).toLocaleDateString()}
+                </td>
                 <td className="p-3">
                   <Trash
                     className="text-red-600 cursor-pointer hover:text-red-800"
